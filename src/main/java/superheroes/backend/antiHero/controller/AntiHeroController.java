@@ -1,8 +1,13 @@
 package superheroes.backend.antiHero.controller;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import superheroes.backend.antiHero.dto.AntiHeroDto;
@@ -15,18 +20,30 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+@Slf4j
+@CrossOrigin(allowedHeaders = "Content-type")
 @AllArgsConstructor
 @RestController
 @RequestMapping("api/v1/anti-heroes")
+@PreAuthorize("isAuthenticated()")
 public class AntiHeroController {
     private final AntiHeroService service;
     private final ModelMapper mapper;
-
+    // LOGGER FROM SLF4j
+    private static final Logger LOGGER = LoggerFactory.getLogger(AntiHeroController.class);
+    // LOGGER FROM LOMBOK SLF4j
+    @CrossOrigin(origins = "http://localhost:4200")
     @GetMapping
-    public List<AntiHeroDto> getAntiHeroes() {
+    public List<AntiHeroDto> getAntiHeroes(Pageable pageable) {
+        int toSkip = pageable.getPageSize() * pageable.getPageNumber();
+        //SLF4J
+        LOGGER.info("Using SLF4J: Getting anti-hero list - getAntiHeroes()");
+        //LOMBOK SLF4j
+        log.info("Using SLF4J Lombok: Getting anti hero list - getAntiHeroes()");
         // Mapstruct is another dto mapper, but it's not straight forward
         var antiHeroList = StreamSupport
                 .stream(service.findAllAntiHeroes().spliterator(), false)
+                .skip(toSkip).limit(pageable.getPageSize())
                 .collect(Collectors.toList());
 
 
@@ -59,7 +76,7 @@ public class AntiHeroController {
             @PathVariable("id") UUID id,
             @Valid @RequestBody AntiHeroDto antiHeroDto
     ) {
-        if (!id.equals(antiHeroDto.getId())) throw new ResponseStatusException (
+        if (!id.equals(antiHeroDto.getId())) throw new ResponseStatusException(
                 HttpStatus.BAD_REQUEST,
                 "id does not match"
         );
